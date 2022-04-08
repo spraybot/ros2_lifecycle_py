@@ -1,3 +1,4 @@
+from cProfile import label
 import rclpy
 
 from rclpy.node import Node
@@ -20,52 +21,60 @@ class LifecycleNode(Node):
         super().__init__(node_name)
         self.state = State.PRIMARY_STATE_UNKNOWN
 
-        self.available_transitions = None
+        self.available_transitions = [
+            TransitionDescription(
+                transition = self.create_transition(Transition.TRANSITION_CREATE),
+                start_state = self.create_state(State.PRIMARY_STATE_UNKNOWN),
+                goal_state = self.create_state(State.PRIMARY_STATE_UNCONFIGURED)
+            ),
+            TransitionDescription(
+                transition = self.create_transition(Transition.TRANSITION_CONFIGURE),
+                start_state = self.create_state(State.PRIMARY_STATE_UNCONFIGURED),
+                goal_state = self.create_state(State.PRIMARY_STATE_INACTIVE)
+            ),
+            TransitionDescription(
+                transition = self.create_transition(Transition.TRANSITION_ACTIVATE),
+                start_state = self.create_state(State.PRIMARY_STATE_INACTIVE),
+                goal_state = self.create_state(State.PRIMARY_STATE_ACTIVE)
+            ),
+            TransitionDescription(
+                transition = self.create_transition(Transition.TRANSITION_DEACTIVATE),
+                start_state = self.create_state(State.PRIMARY_STATE_ACTIVE),
+                goal_state = self.create_state(State.PRIMARY_STATE_INACTIVE)
+            ),
+            TransitionDescription(
+                transition = self.create_transition(Transition.TRANSITION_UNCONFIGURED_SHUTDOWN),
+                start_state = self.create_state(State.PRIMARY_STATE_UNCONFIGURED),
+                goal_state = self.create_state(State.PRIMARY_STATE_FINALIZED)
+            ),
+            TransitionDescription(
+                transition = self.create_transition(Transition.TRANSITION_INACTIVE_SHUTDOWN),
+                start_state = self.create_state(State.PRIMARY_STATE_INACTIVE),
+                goal_state = self.create_state(State.PRIMARY_STATE_FINALIZED)
+            ),
+            TransitionDescription(
+                transition = self.create_transition(Transition.TRANSITION_ACTIVE_SHUTDOWN),
+                start_state = self.create_state(State.PRIMARY_STATE_ACTIVE),
+                goal_state = self.create_state(State.PRIMARY_STATE_FINALIZED)
+            ),
+            TransitionDescription(
+                transition = self.create_transition(Transition.TRANSITION_CLEANUP),
+                start_state = self.create_state(State.PRIMARY_STATE_INACTIVE),
+                goal_state = self.create_state(State.PRIMARY_STATE_UNCONFIGURED)
+            )
+        ]
         self.available_states = [
-            State(
-                id = State.PRIMARY_STATE_UNKNOWN,
-                label = self.get_label(State, State.PRIMARY_STATE_UNKNOWN)
-            ) ,
-            State(
-                id = State.PRIMARY_STATE_UNCONFIGURED,
-                label = self.get_label(State, State.PRIMARY_STATE_UNCONFIGURED)
-            ) ,
-            State(
-                id = State.PRIMARY_STATE_INACTIVE,
-                label = self.get_label(State, State.PRIMARY_STATE_INACTIVE)
-            ) ,
-            State(
-                id = State.PRIMARY_STATE_ACTIVE,
-                label = self.get_label(State, State.PRIMARY_STATE_ACTIVE)
-            ) ,
-            State(
-                id = State.PRIMARY_STATE_FINALIZED,
-                label = self.get_label(State, State.PRIMARY_STATE_FINALIZED)
-            ) ,
-            State(
-                id = State.TRANSITION_STATE_CONFIGURING,
-                label = self.get_label(State, State.TRANSITION_STATE_CONFIGURING)
-            ) ,
-            State(
-                id = State.TRANSITION_STATE_CLEANINGUP,
-                label = self.get_label(State, State.TRANSITION_STATE_CLEANINGUP)
-            ) ,
-            State(
-                id = State.TRANSITION_STATE_SHUTTINGDOWN,
-                label = self.get_label(State, State.TRANSITION_STATE_SHUTTINGDOWN)
-            ) ,
-            State(
-                id = State.TRANSITION_STATE_ACTIVATING,
-                label = self.get_label(State, State.TRANSITION_STATE_ACTIVATING)
-            ) ,
-            State(
-                id = State.TRANSITION_STATE_DEACTIVATING,
-                label = self.get_label(State, State.TRANSITION_STATE_DEACTIVATING)
-            ) ,
-            State(
-                id = State.TRANSITION_STATE_ERRORPROCESSING,
-                label = self.get_label(State, State.TRANSITION_STATE_ERRORPROCESSING)
-            ) 
+            self.create_state(State.PRIMARY_STATE_UNKNOWN),
+            self.create_state(State.PRIMARY_STATE_UNCONFIGURED),
+            self.create_state(State.PRIMARY_STATE_INACTIVE),
+            self.create_state(State.PRIMARY_STATE_ACTIVE),
+            self.create_state(State.PRIMARY_STATE_FINALIZED),
+            self.create_state(State.TRANSITION_STATE_CONFIGURING),
+            self.create_state(State.TRANSITION_STATE_CLEANINGUP),
+            self.create_state(State.TRANSITION_STATE_SHUTTINGDOWN),
+            self.create_state(State.TRANSITION_STATE_ACTIVATING),
+            self.create_state(State.TRANSITION_STATE_DEACTIVATING),
+            self.create_state(State.TRANSITION_STATE_ERRORPROCESSING)
         ]
 
         self.srv_get_state = self.create_service(
@@ -107,6 +116,12 @@ class LifecycleNode(Node):
                 return key
         return None
 
+
+    def create_state(self, state):
+        return State(id=state, label=self.get_label(State, state))
+
+    def create_transition(self, transition):
+        return Transition(id = transition, label = self.get_label(Transition, transition))
 
     def get_state(self, request, response):
         response.current_state = State(id=self.state, label=self.get_label(State, self.state))
